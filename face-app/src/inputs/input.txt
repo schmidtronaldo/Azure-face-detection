@@ -1,0 +1,1 @@
+arquivo que receberá imagens para comparação
