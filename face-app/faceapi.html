@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Face APP</title>
+  <style>
+    div {
+      position: absolute;
+      border: 4px solid red;
+      width: 100px;
+      height: 100px;
+    }
+
+    div > ul > li {
+      font-size: 20px;
+      font-weight: bold;
+      color: white;
+    }
+
+    .video {
+      height: 50%;
+      width: 50%;
+    }
+
+    #canvas {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div> <!--Div que irá ficar centralizada no rosto-->
+    <ul></ul>
+  </div>
+  <video autoplay id="video"></video> <!--é um elemento HTML que pode ser usado para desenhar usando linguagem de "script"(JS)-->
+  
+  <canvas id="canvas"></canvas> 
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+  <script src="assets/js/camera.js"></script>
+  <script>
+    const subscriptionKey = "51b87d8709e54a26ab28da8b6edb06f1";
+    const url = "https://ai-cameras.cognitiveservices.azure.com/";
+
+    // função que converte o blob em base 64
+    var makeblob = function(dataURL) { // recebemos o dado na url do canvas
+      const BASE64_MARKER = ';base64,'; // converto para base64
+      const parts = dataURL.split(BASE64_MARKER); // separo o que é de fato base64
+      const contentType = parts[0].split(':')[1];      
+
+      if (parts[1] == undefined) return null;
+
+      const raw = window.atob(parts[1]);
+      const rawLength = raw.length;
+      const uInt8Array = new Uint8Array(rawLength); // converto em array
+
+      for (let i = 0; i < rawLength; ++i) { // percorro esse array
+        uInt8Array[i] = raw.charCodeAt(i);
+      }
+
+      return new Blob([uInt8Array], { // retorno o blob
+        type: contentType
+      });
+    }
+
+    var processImage = function(sourceImage) {
+      var param = { // modelo do JSON
+        "detectionModel": "detection_01", // modelos de detecção
+        "returnFaceId": "true", 
+        "returnAge": "true",
+        "returnFaceAttributes": "age, emotion, glasses, gender, smile", // atribudos da face que queremos retornar
+        "recognitionModel": "recognition_01"
+      };
+
+      $.ajax({ // disparar a mensagem
+        url: url + "?" + $.param(param),
+        type: "POST",
+        beforeSend: function(xhr) { // xhr - xml http request - cabeçalho
+          xhr.setRequestHeader("Content-Type", "application/octet-stream");
+          xhr.setRequestHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
+        },
+        data: sourceImage,
+        processData: false
+      }).done(function(data) {
+        // debugger
+        if (data.length == 1)
+          makeDiv(data[0]);
+      });
+    }
+
+    var makeDiv = function(data) {
+      // debugger;
+      let height = data.faceRectangle.height;
+      let left = data.faceRectangle.left;
+      let top = data.faceRectangle.top;
+      let width = data.faceRectangle.width;
+      $("div").css("height", height);
+      $("div").css("left", left);
+      $("div").css("top", top);
+      $("div").css("width", width);
+
+      $("ul").empty();
+
+      $("ul").append(`<li>Idade:${data.faceAttributes.age}</li>`);
+      $("ul").append(`<li>Sexo:${data.faceAttributes.gender}</li>`);
+      $("ul").append(`<li>Óculos:${data.faceAttributes.glasses}</li>`);
+      $("ul").append(`<li>Sorriso:${data.faceAttributes.smile}</li>`);
+      $("ul").append(`<li>Bravo:${data.faceAttributes.emotion.anger}</li>`);
+      $("ul").append(`<li>Feliz:${data.faceAttributes.emotion.happiness}</li>`);
+      $("ul").append(`<li>Neutro:${data.faceAttributes.emotion.neutral}</li>`);
+    }
+  </script>
+</body>
+
+</html>
